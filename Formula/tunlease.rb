@@ -11,6 +11,7 @@ class Tunlease < Formula
   def install
     ldflags = "-s -w -X main.version=v#{version} -X main.buildTime=homebrew"
     system "go", "build", *std_go_args(ldflags:, output: bin/"tunle"), "./cmd/tunlease"
+    generate_completions_from_executable(bin/"tunle", "completion")
   end
 
   test do
