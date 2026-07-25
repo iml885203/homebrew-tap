@@ -16,6 +16,7 @@ class Tunlease < Formula
 
   test do
     assert_match "v#{version}", shell_output("#{bin}/tunle --version")
+    assert_match "Check local service", shell_output("#{bin}/tunle doctor --help")
 
     port = free_port
     (testpath/"config.yaml").write <<~YAML
