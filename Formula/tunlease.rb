@@ -1,8 +1,8 @@
 class Tunlease < Formula
   desc "Claim fixed callback paths and tunnel them to localhost"
   homepage "https://github.com/iml885203/tunlease"
-  url "https://github.com/iml885203/tunlease/archive/refs/tags/v0.7.3.tar.gz"
-  sha256 "8ccbd1396fab21f2255dbd2deee882a19e58c6a78bce997abf5e1175d26f1848"
+  url "https://github.com/iml885203/tunlease/archive/refs/tags/v0.7.4.tar.gz"
+  sha256 "835d5a90f49dfe54ab02db750dcf137b7c6785341fae7522e78195ecbbdd78be"
   license "MIT"
   head "https://github.com/iml885203/tunlease.git", branch: "main"
 
