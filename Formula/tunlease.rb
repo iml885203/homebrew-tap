@@ -10,12 +10,12 @@ class Tunlease < Formula
 
   def install
     ldflags = "-s -w -X main.version=v#{version} -X main.buildTime=homebrew"
-    system "go", "build", *std_go_args(ldflags:, output: bin/"tunle"), "./cmd/tunlease"
-    generate_completions_from_executable(bin/"tunle", "completion")
+    system "go", "build", *std_go_args(ldflags:, output: bin/"tul"), "./cmd/tunlease"
+    generate_completions_from_executable(bin/"tul", "completion")
   end
 
   test do
-    assert_match "v#{version}", shell_output("#{bin}/tunle --version")
+    assert_match "v#{version}", shell_output("#{bin}/tul --version")
 
     port = free_port
     (testpath/"config.yaml").write <<~YAML
@@ -27,7 +27,7 @@ class Tunlease < Formula
     YAML
 
     pid = fork do
-      exec bin/"tunle", "gateway", "--config", testpath/"config.yaml"
+      exec bin/"tul", "gateway", "--config", testpath/"config.yaml"
     end
     sleep 1
     system "curl", "--fail", "--silent", "http://127.0.0.1:#{port}/_tunlease/healthz"
