@@ -49,7 +49,7 @@ jobs:
           git checkout -B "$branch"
           git add Formula/tunlease.rb
           git commit -m "tunlease ${VERSION}"
-          git push --force-with-lease origin "$branch"
+          git push --force origin "$branch"
           if ! gh pr view "$branch" >/dev/null 2>&1; then
             gh pr create \
               --base main \
