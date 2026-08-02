@@ -32,7 +32,12 @@ jobs:
         run: brew install-bundler-gems
       - name: Validate formula
         run: |
+          python3 .github/scripts/semver-not-older.py --self-test
           brew style --formula iml885203/tap/tunlease
           brew audit --strict --new --online iml885203/tap/tunlease
           brew install --build-from-source iml885203/tap/tunlease
           brew test iml885203/tap/tunlease
+          brew style --formula iml885203/tap/orbit
+          brew audit --strict --new --online iml885203/tap/orbit
+          brew install iml885203/tap/orbit
+          brew test iml885203/tap/orbit

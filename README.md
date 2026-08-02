@@ -1,7 +1,8 @@
 # Homebrew tap
 
 ```bash
+brew install iml885203/tap/orbit
 brew install iml885203/tap/tunlease
 ```
 
-Formulae in this tap build from the projects' tagged source archives.
+Formulae in this tap install verified project releases.
