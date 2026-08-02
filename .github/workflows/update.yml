@@ -4,6 +4,27 @@ on:
   schedule:
     - cron: "17 */6 * * *"
   workflow_dispatch:
+    inputs:
+      project:
+        description: Formula to update
+        required: true
+        default: tunlease
+        type: choice
+        options: [tunlease, orbit]
+      version:
+        description: Exact released tag; defaults to the latest release
+        required: false
+        type: string
+      correlation:
+        description: Caller-provided run correlation
+        required: false
+        type: string
+
+run-name: Update ${{ inputs.project || 'tunlease' }} ${{ inputs.version || 'latest' }} ${{ inputs.correlation }}
+
+concurrency:
+  group: update-${{ inputs.project || 'tunlease' }}
+  cancel-in-progress: false
 
 permissions:
   actions: write
@@ -15,21 +36,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Check latest Tunlease release
+      - name: Resolve release
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
+          REQUESTED_PROJECT: ${{ inputs.project }}
+          REQUESTED_VERSION: ${{ inputs.version }}
         run: |
-          tag=$(gh api repos/iml885203/tunlease/releases/latest --jq .tag_name)
+          set -euo pipefail
+          project="${REQUESTED_PROJECT:-tunlease}"
+          case "$project" in tunlease|orbit) ;; *) echo "unsupported project: $project" >&2; exit 1;; esac
+          tag="$REQUESTED_VERSION"
+          if [ -z "$tag" ]; then
+            tag=$(gh api "repos/iml885203/$project/releases/latest" --jq .tag_name)
+          fi
+          if ! [[ "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "invalid release tag: $tag" >&2
+            exit 1
+          fi
           version=${tag#v}
-          current=$(sed -nE 's|.*tags/v([^/]+)\.tar\.gz.*|\1|p' Formula/tunlease.rb)
+          if [ "$project" = orbit ]; then
+            current=$(sed -nE 's|.*releases/download/v([^/]+)/orbit-.*|\1|p' Formula/orbit.rb | head -n 1)
+          else
+            current=$(sed -nE 's|.*tags/v([^/]+)\.tar\.gz.*|\1|p' Formula/tunlease.rb)
+          fi
+          echo "project=$project" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          if [ "$version" = "$current" ]; then
-            echo "current=true" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Update formula
-        if: steps.release.outputs.current != 'true'
+          python3 .github/scripts/semver-not-older.py "$current" "$version"
+          if [ "$version" = "$current" ]; then echo "current=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Update Tunlease formula
+        if: steps.release.outputs.current != 'true' && steps.release.outputs.project == 'tunlease'
         env:
           TAG: ${{ steps.release.outputs.tag }}
         run: |
@@ -37,49 +74,51 @@ jobs:
           sha=$(curl -fsSL "$url" | sha256sum | cut -d' ' -f1)
           sed -i -E "s|url \".*\"|url \"${url}\"|" Formula/tunlease.rb
           sed -i -E "s|sha256 \".*\"|sha256 \"${sha}\"|" Formula/tunlease.rb
-      - name: Open update pull request
+      - name: Update Orbit formula
+        if: steps.release.outputs.current != 'true' && steps.release.outputs.project == 'orbit'
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://github.com/iml885203/orbit/releases/download/${TAG}/checksums.txt" -o checksums.txt
+          for platform in darwin-amd64 darwin-arm64 linux-amd64 linux-arm64; do
+            asset="orbit-${platform}"
+            sha=$(awk -v name="$asset" '$2 == name || $2 == "*" name { print $1; exit }' checksums.txt)
+            [ -n "$sha" ] || { echo "checksum missing for $asset" >&2; exit 1; }
+            sed -i -E "s|releases/download/v[^/]+/${asset}|releases/download/${TAG}/${asset}|" Formula/orbit.rb
+            sed -i -E "/${asset}/,/sha256/ s/sha256 \"[0-9a-f]+\"/sha256 \"${sha}\"/" Formula/orbit.rb
+          done
+          rm checksums.txt
+      - name: Open, test, and merge update
         if: steps.release.outputs.current != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          PROJECT: ${{ steps.release.outputs.project }}
           VERSION: ${{ steps.release.outputs.version }}
         run: |
-          branch="automation/tunlease-${VERSION}"
+          set -euo pipefail
+          branch="automation/${PROJECT}-${VERSION}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$branch"
-          git add Formula/tunlease.rb
-          git commit -m "tunlease ${VERSION}"
+          git add "Formula/${PROJECT}.rb"
+          git commit -m "${PROJECT} ${VERSION}"
           git push --force origin "$branch"
           if ! gh pr view "$branch" >/dev/null 2>&1; then
-            gh pr create \
-              --base main \
-              --head "$branch" \
-              --title "tunlease ${VERSION}" \
-              --body "Automated source formula update for Tunlease ${VERSION}."
+            gh pr create --base main --head "$branch" --title "${PROJECT} ${VERSION}" \
+              --body "Automated formula update for ${PROJECT} ${VERSION}."
           fi
-          previous_run_id=$(gh run list \
-            --workflow test.yml \
-            --branch "$branch" \
-            --event workflow_dispatch \
-            --limit 1 \
-            --json databaseId \
-            --jq '.[0].databaseId')
+          previous_run_id=$(gh run list --workflow test.yml --branch "$branch" --event workflow_dispatch \
+            --limit 1 --json databaseId --jq '.[0].databaseId')
           gh workflow run test.yml --ref "$branch"
           for _ in $(seq 1 20); do
-            run_id=$(gh run list \
-              --workflow test.yml \
-              --branch "$branch" \
-              --event workflow_dispatch \
-              --limit 1 \
-              --json databaseId \
-              --jq '.[0].databaseId')
+            run_id=$(gh run list --workflow test.yml --branch "$branch" --event workflow_dispatch \
+              --limit 1 --json databaseId --jq '.[0].databaseId')
             [ -n "$run_id" ] && [ "$run_id" != "$previous_run_id" ] && break
             run_id=
             sleep 3
           done
-          [ -n "${run_id:-}" ] || {
-            echo "test workflow did not start" >&2
-            exit 1
-          }
+          [ -n "${run_id:-}" ] || { echo "test workflow did not start" >&2; exit 1; }
           gh run watch "$run_id" --exit-status
           gh pr merge "$branch" --squash --delete-branch
