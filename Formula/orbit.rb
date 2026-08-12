@@ -5,21 +5,21 @@ class Orbit < Formula
 
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/iml885203/orbit/releases/download/v0.14.2/orbit-darwin-arm64"
-      sha256 "069ba524dbaa09bb63b9c22109d1d01aa83eeb45309046e22ed5dc8b9de3e8fa"
+      url "https://github.com/iml885203/orbit/releases/download/v0.14.3/orbit-darwin-arm64"
+      sha256 "cf92769b223e1bdbbf8c9c274ab0e982661733cc92795e8c0715d7dfc81d7555"
     else
-      url "https://github.com/iml885203/orbit/releases/download/v0.14.2/orbit-darwin-amd64"
-      sha256 "c2506ad5f3fb213ba142a8cea4251c1caa41170d7d40241aca8b007945cb0742"
+      url "https://github.com/iml885203/orbit/releases/download/v0.14.3/orbit-darwin-amd64"
+      sha256 "bdb8523b6a8ced7d21a0578ba1c9559ed66a99de54813943f58dc54a3c0fed81"
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
-      url "https://github.com/iml885203/orbit/releases/download/v0.14.2/orbit-linux-arm64"
-      sha256 "5b9f570f0adb6d4369aa2fee766cc5ebde257e9a622ba2e69b24218108e8dc63"
+      url "https://github.com/iml885203/orbit/releases/download/v0.14.3/orbit-linux-arm64"
+      sha256 "70dcdedcd29621c4d888d35abe7cc2970817e504df0a28215c21ed9122703164"
     else
-      url "https://github.com/iml885203/orbit/releases/download/v0.14.2/orbit-linux-amd64"
-      sha256 "e3fb11c0b4e6db4568eeb6e3f044ab3ad68c6e2b92f724ae0135839b3b809268"
+      url "https://github.com/iml885203/orbit/releases/download/v0.14.3/orbit-linux-amd64"
+      sha256 "938610c3100f53a90df34f1a0e896e086177b4afe03fa79351a018d90e55d4bd"
     end
   end
 
