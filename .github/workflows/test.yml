@@ -20,9 +20,15 @@ jobs:
       - name: Set up Homebrew
         id: set-up-homebrew
         uses: Homebrew/actions/setup-homebrew@1f8e202ffddf94def7f42f6fa3a482e821489f9c # 2026.07.10.1
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+      - name: Install workflow test dependency
+        run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.3
       - name: Cache Homebrew Bundler RubyGems
         id: cache
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ${{ steps.set-up-homebrew.outputs.gems-path }}
           key: ${{ runner.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
@@ -33,6 +39,7 @@ jobs:
       - name: Validate formula
         run: |
           python3 .github/scripts/semver-not-older.py --self-test
+          python3 .github/scripts/test-release-security.py
           brew style --formula iml885203/tap/tunlease
           brew audit --strict --new --online iml885203/tap/tunlease
           brew install --build-from-source iml885203/tap/tunlease
